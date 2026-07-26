@@ -35,3 +35,6 @@ checkpoints/*.pt
 .idea/
 *.swp
 .DS_Store
+
+# 本機開發設定（Claude Code 的伺服器啟動設定，因人而異）
+.claude/
