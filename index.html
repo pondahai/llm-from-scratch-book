@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniLLM《大語言模型工作原理與實作》互動視覺化前端</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #131b2e;
+            --bg-card: rgba(23, 32, 54, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-cyan: #00f2fe;
+            --accent-blue: #4facfe;
+            --accent-purple: #7f00ff;
+            --accent-magenta: #e100ff;
+            --accent-amber: #ffb300;
+            --accent-green: #10b981;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow-glow: 0 0 25px rgba(79, 172, 254, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(79, 172, 254, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(127, 0, 255, 0.08) 0%, transparent 40%);
+        }
+
+        header {
+            background: rgba(19, 27, 46, 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+            color: #000;
+        }
+
+        .title-group h1 {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #fff, var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title-group p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-green);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.3); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .app-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 24px;
+            gap: 24px;
+        }
+
+        .sidebar {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            width: 100%;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(90deg, rgba(79, 172, 254, 0.15), rgba(127, 0, 255, 0.15));
+            border-left: 4px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .section-pane {
+            display: none;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .section-pane.active {
+            display: flex;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 24px;
+        }
+
+        .grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+
+        .tier-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .tier-card:hover, .tier-card.active {
+            border-color: var(--accent-cyan);
+            background: rgba(79, 172, 254, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.2);
+        }
+
+        .tier-card.active {
+            border-width: 2px;
+        }
+
+        .tier-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-amber);
+            text-transform: uppercase;
+        }
+
+        .tier-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .tier-params {
+            font-size: 13px;
+            color: var(--accent-cyan);
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+        }
+
+        .tier-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'Fira Code', monospace;
+        }
+
+        .prompt-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .chip-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chip-btn:hover, .chip-btn.active {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #000;
+            font-weight: 600;
+            border-color: transparent;
+        }
+
+        .controls-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="range"] {
+            accent-color: var(--accent-cyan);
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .run-btn {
+            padding: 14px 28px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            color: #000;
+            font-weight: 700;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4);
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .run-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 242, 254, 0.6);
+        }
+
+        .terminal {
+            background: #060911;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            font-family: 'Fira Code', monospace;
+            min-height: 180px;
+            position: relative;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        .token {
+            display: inline-block;
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 4px;
+            background: rgba(79, 172, 254, 0.15);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            color: var(--accent-cyan);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .token.prompt-token {
+            background: rgba(255, 179, 0, 0.15);
+            border-color: rgba(255, 179, 0, 0.3);
+            color: var(--accent-amber);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .arch-node {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .arch-node:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(79, 172, 254, 0.05);
+        }
+
+        .node-tag {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .node-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+
+        .node-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 13px;
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <div class="logo-icon">
+                <i data-lucide="brain-circuit"></i>
+            </div>
+            <div class="title-group">
+                <h1>MiniLLM 視覺化研發與推論儀表板</h1>
+                <p>《大語言模型工作原理與實作》多參數量階梯 (Nano / Micro / Mini / Base / 7B)</p>
+            </div>
+        </div>
+        <div class="status-badge">
+            <div class="pulse-dot"></div>
+            CPU 本地運作中
+        </div>
+    </header>
+
+    <div class="app-container">
+        <nav class="sidebar">
+            <button class="nav-btn active" onclick="switchTab('tiers')">
+                <i data-lucide="layers"></i>
+                參數量等級對比 (Scale Tiers)
+            </button>
+            <button class="nav-btn" onclick="switchTab('demo')">
+                <i data-lucide="play-circle"></i>
+                推論生成實踐 (Demo)
+            </button>
+            <button class="nav-btn" onclick="switchTab('training')">
+                <i data-lucide="line-chart"></i>
+                預訓練 Loss 曲線
+            </button>
+            <button class="nav-btn" onclick="switchTab('architecture')">
+                <i data-lucide="network"></i>
+                心智圖模組與架構
+            </button>
+            <button class="nav-btn" onclick="switchTab('spec')">
+                <i data-lucide="cpu"></i>
+                MiniLLM 規格 (Card)
+            </button>
+        </nav>
+
+        <main class="main-content">
+
+            <!-- TAB 0: PARAMETER SCALE TIERS -->
+            <div id="pane-tiers" class="section-pane active">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i data-lucide="sliders" style="color: var(--accent-cyan);"></i>
+                            書籍專案參數量等級對比 (Model Scale Tiers Selector)
+                        </div>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+                        點擊切換不同參數量等級，觀看模型維度、記憶體開銷與運算量 (FLOPs) 的動態分解：
+                    </p>
+
+                    <div class="grid-5">
+                        <div class="tier-card" id="card-nano" onclick="selectTier('nano')">
+                            <div class="tier-badge">極輕量測試</div>
+                            <div class="tier-name">Nano Spec</div>
+                            <div class="tier-params">78.9 K 參數</div>
+                            <div class="tier-desc">Mindmap 心智圖展示版</div>
+                        </div>
+                        <div class="tier-card" id="card-sanguo_mini" onclick="selectTier('sanguo_mini')">
+                            <div class="tier-badge">擴語料實驗 · A 組</div>
+                            <div class="tier-name">Mini @ 5 萬字</div>
+                            <div class="tier-params">2.02 M 參數</div>
+                            <div class="tier-desc">只讀《三國演義》前段</div>
+                        </div>
+                        <div class="tier-card active" id="card-mini" onclick="selectTier('mini')">
+                            <div class="tier-badge">★ 主推 · B 組</div>
+                            <div class="tier-name">Mini @ 291 萬字</div>
+                            <div class="tier-params">2.02 M 參數</div>
+                            <div class="tier-desc">四大名著全語料</div>
+                        </div>
+                        <div class="tier-card" id="card-micro" onclick="selectTier('micro')">
+                            <div class="tier-badge">擴模型 · 小</div>
+                            <div class="tier-name">Micro Spec</div>
+                            <div class="tier-params">864.8 K 參數</div>
+                            <div class="tier-desc">全語料 · 最小規格</div>
+                        </div>
+                        <div class="tier-card" id="card-base" onclick="selectTier('base')">
+                            <div class="tier-badge">擴模型 · 大</div>
+                            <div class="tier-name">Base Spec</div>
+                            <div class="tier-params">6.71 M 參數</div>
+                            <div class="tier-desc">全語料 · CPU 深度實驗版</div>
+                        </div>
+                        <div class="tier-card" id="card-llama7b" onclick="selectTier('llama7b')">
+                            <div class="tier-badge">工業級對比</div>
+                            <div class="tier-name">LLaMA 3 (8B)</div>
+                            <div class="tier-params">8.03 B 參數</div>
+                            <div class="tier-desc">第 11 章擴展指南目標</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i data-lucide="calculator" style="color: var(--accent-purple);"></i>
+                            當前選擇參數量等級：<span id="tier-display-name" style="color: var(--accent-cyan);">Mini Spec (1.08M)</span> 精確分解
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-secondary); font-size: 14px;">
+                        <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                            <th style="padding: 12px; color: var(--text-primary);">模型模組 (Module)</th>
+                            <th style="padding: 12px; color: var(--text-primary);">計算公式 (Formula)</th>
+                            <th style="padding: 12px; color: var(--text-primary);">參數量 (Params)</th>
+                            <th style="padding: 12px; color: var(--text-primary);">佔比 (%)</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Token Embedding 嵌入層</td>
+                            <td style="padding: 12px; font-family: 'Fira Code', monospace;" id="calc-embed-formula">6,178 × 128</td>
+                            <td style="padding: 12px; font-weight: 700; color: var(--text-primary);" id="calc-embed-params">320,640</td>
+                            <td style="padding: 12px;" id="calc-embed-pct">29.6%</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Transformer Blocks (層數 N)</td>
+                            <td style="padding: 12px; font-family: 'Fira Code', monospace;" id="calc-block-formula">3 × (49K + 98K + 256)</td>
+                            <td style="padding: 12px; font-weight: 700; color: var(--text-primary);" id="calc-block-params">443,136</td>
+                            <td style="padding: 12px;" id="calc-block-pct">40.9%</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Final RMSNorm & LM Head</td>
+                            <td style="padding: 12px; font-family: 'Fira Code', monospace;" id="calc-head-formula">128 + (128 × 6,178)</td>
+                            <td style="padding: 12px; font-weight: 700; color: var(--text-primary);" id="calc-head-params">790,912</td>
+                            <td style="padding: 12px;" id="calc-head-pct">39.1%</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color); background: rgba(79, 172, 254, 0.05);">
+                            <td style="padding: 12px; font-weight: 700; color: #fff;">總參數量 (Total Parameters)</td>
+                            <td style="padding: 12px; font-family: 'Fira Code', monospace; color: var(--accent-cyan);" id="calc-total-formula">Embedding + Layers + Head</td>
+                            <td style="padding: 12px; font-weight: 700; color: var(--accent-cyan); font-size: 16px;" id="calc-total-params">2,024,832</td>
+                            <td style="padding: 12px; font-weight: 700; color: var(--accent-cyan);">100.0%</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-amber);">記憶體與硬體要求</td>
+                            <td style="padding: 12px; font-family: 'Fira Code', monospace;" id="calc-memory-formula">FP32: 4.14 MB | INT4: 0.52 MB</td>
+                            <td style="padding: 12px; color: var(--accent-green);" id="calc-hardware">家用 CPU 秒級回應</td>
+                            <td style="padding: 12px; color: var(--text-muted);" id="calc-flops">~2.17 MFLOPs</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 1: DEMO SIMULATION -->
+            <div id="pane-demo" class="section-pane">
+                <div class="grid-2">
+                    <div class="stat-box">
+                        <span class="stat-label">當前選擇模型參數量</span>
+                        <span class="stat-value" id="demo-stat-params">2,024,832</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">詞表大小 (Vocab)</span>
+                        <span class="stat-value" id="demo-stat-vocab">6,178 Tokens</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i data-lucide="sparkles" style="color: var(--accent-cyan);"></i>
+                            四大名著 MiniLLM 現場推論生成器 (Next-Token Generation)
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; display: block;">切換測試模型參數量規格 (Model Scale Tier)：</label>
+                        <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+                            <button class="chip-btn" id="btn-tier-sanguo_mini" onclick="switchModelTier('sanguo_mini')" style="border: 1px solid var(--accent-cyan);">A 組 · Mini @ 5 萬字 (只讀三國)</button>
+                            <button class="chip-btn active" id="btn-tier-mini" onclick="switchModelTier('mini')">B 組 · Mini @ 291 萬字 (全語料)</button>
+                            <button class="chip-btn" id="btn-tier-mini_chat" onclick="switchModelTier('mini_chat')" style="border: 1px solid var(--accent-green); color: var(--accent-green); font-weight: 600;">🤖 Chat Assistant (2.02M SFT對齊版)</button>
+                            <button class="chip-btn" id="btn-tier-mini_dpo" onclick="switchModelTier('mini_dpo')" style="border: 1px solid var(--accent-amber); color: var(--accent-amber); font-weight: 600;">🎯 DPO 對齊版 (§10.5)</button>
+                            <button class="chip-btn" id="btn-tier-micro" onclick="switchModelTier('micro')">Micro 規格 (864.8K 參數)</button>
+                            <button class="chip-btn" id="btn-tier-base" onclick="switchModelTier('base')">Base 規格 (6.71M 參數)</button>
+                        </div>
+                        <div id="tier-cmd-box" style="background: rgba(0, 242, 254, 0.05); border: 1px dashed rgba(0, 242, 254, 0.3); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+                            💡 <b>在本地 Python 重新訓練此規格</b>：<code style="color: var(--accent-cyan); font-family: 'Fira Code', monospace;" id="tier-cmd-text">python code/code_ch9_pretraining.py</code>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; display: block;">✍️ 任意自訂提示詞輸入 (或點擊下方快捷選項)：</label>
+                        <input type="text" id="custom-prompt-input" value="宴桃園" placeholder="請輸入任意提示詞（例如：問：劉備是誰？答：、曹操、諸葛亮...）" style="width: 100%; padding: 12px 16px; border-radius: var(--radius-md); background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 14px; margin-bottom: 12px; outline: none;" oninput="updatePromptFromInput(this.value)">
+
+                        <div class="prompt-selector">
+                            <button class="chip-btn active" onclick="selectPrompt('問：劉備是誰？答：')">問：劉備是誰？答：</button>
+                            <button class="chip-btn" onclick="selectPrompt('問：諸葛亮是誰？答：')">問：諸葛亮是誰？答：</button>
+                            <button class="chip-btn" onclick="selectPrompt('宴桃園')">宴桃園</button>
+                            <button class="chip-btn" onclick="selectPrompt('曹操')">曹操</button>
+                            <button class="chip-btn" onclick="selectPrompt('劉備')">劉備</button>
+                            <button class="chip-btn" onclick="selectPrompt('諸葛亮')">諸葛亮</button>
+                            <button class="chip-btn" onclick="selectPrompt('武松')">武松</button>
+                            <button class="chip-btn" onclick="selectPrompt('寶玉')">寶玉</button>
+                            <button class="chip-btn" onclick="selectPrompt('悟空')">悟空</button>
+                        </div>
+                    </div>
+
+                    <div class="controls-row">
+                        <div class="input-group">
+                            <label>Temperature (採樣隨機度): <span id="temp-val">0.7</span></label>
+                            <input type="range" id="temp-slider" min="0.1" max="1.5" step="0.1" value="0.7" oninput="document.getElementById('temp-val').innerText = this.value">
+                        </div>
+                        <div class="input-group">
+                            <label>Top-K 限制: <span id="topk-val">5</span></label>
+                            <input type="range" id="topk-slider" min="1" max="20" step="1" value="5" oninput="document.getElementById('topk-val').innerText = this.value">
+                        </div>
+                        <div class="input-group">
+                            <label>最大生成 Tokens: <span id="tokens-val">30</span></label>
+                            <input type="range" id="tokens-slider" min="10" max="60" step="5" value="30" oninput="document.getElementById('tokens-val').innerText = this.value">
+                        </div>
+                    </div>
+
+                    <button class="run-btn" onclick="startGeneration()">
+                        <i data-lucide="play"></i> 執行逐 Token 串流推論生成
+                    </button>
+
+                    <div style="margin-top: 24px;">
+                        <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; display: block;">模型 Token 解碼串流輸出 (Stream Output)：</label>
+                        <div class="terminal" id="terminal-out">
+                            <span class="token prompt-token">宴</span><span class="token prompt-token">桃</span><span class="token prompt-token">園</span>
+                            <span style="color: var(--text-muted);">（點擊上方「執行逐 Token 串流推論生成」觀察模型即時產出）</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: TRAINING LOSS -->
+            <div id="pane-training" class="section-pane">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i data-lucide="line-chart" style="color: var(--accent-cyan);"></i>
+                                《三國演義》預訓練 Loss 曲線 (`train_sanguo_llm.py`)
+                            </div>
+                        </div>
+                        <canvas id="sanguoChart" height="220"></canvas>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i data-lucide="activity" style="color: var(--accent-purple);"></i>
+                                四大名著聯合預訓練 Loss 曲線 (`train_all_four_novels_live.py`)
+                            </div>
+                        </div>
+                        <canvas id="combinedChart" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: ARCHITECTURE & MIND MAP -->
+            <div id="pane-architecture" class="section-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i data-lucide="boxes" style="color: var(--accent-cyan);"></i>
+                            Transformer 10 大積木式心智圖對照模組
+                        </div>
+                    </div>
+                    <div class="node-grid">
+                        <div class="arch-node">
+                            <div class="node-tag">Chapter 1</div>
+                            <div class="node-title">SimpleBPEStyleTokenizer</div>
+                            <div class="node-desc">將中文字詞精準編碼為整數 ID，具備字典映射與雙向解碼能力。</div>
+                        </div>
+                        <div class="arch-node">
+                            <div class="node-tag">Chapter 2</div>
+                            <div class="node-title">TokenEmbedding</div>
+                            <div class="node-desc">將離散 Token ID 映射至連續的高維語義空間（語義 GPS 座標）。</div>
+                        </div>
+                        <div class="arch-node">
+                            <div class="node-tag">Chapter 3</div>
+                            <div class="node-title">RoPE 旋轉位置編碼</div>
+                            <div class="node-desc">透過複數平面旋轉矩陣赋予序列相對位置感知，克服長文本迷失。</div>
+                        </div>
+                        <div class="arch-node">
+                            <div class="node-tag">Chapter 4 & 5</div>
+                            <div class="node-title">Grouped-Query Attention & KV Cache</div>
+                            <div class="node-desc">分組查詢注意力與推論快取矩陣，大巨幅提升生成推論速度與記憶體利用率。</div>
+                        </div>
+                        <div class="arch-node">
+                            <div class="node-tag">Chapter 6</div>
+                            <div class="node-title">SwiGLU FFN 門控網絡</div>
+                            <div class="node-desc">採用 SwiGLU 門控前饋網絡作為主要知識儲存與加工神經單元。</div>
+                        </div>
+                        <div class="arch-node">
+                            <div class="node-tag">Chapter 7</div>
+                            <div class="node-title">RMSNorm & 殘差流 (Residual Stream)</div>
+                            <div class="node-desc">Root Mean Square Normalization 確保百層深層網絡訓練梯度穩定不爆炸。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: SPEC & MODEL CARD -->
+            <div id="pane-spec" class="section-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i data-lucide="file-badge" style="color: var(--accent-amber);"></i>
+                            DIY MiniLLM Model Card 官方規格說明
+                        </div>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-secondary); font-size: 14px;">
+                        <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                            <th style="padding: 12px; color: var(--text-primary);">規格參數 (Hyperparameter)</th>
+                            <th style="padding: 12px; color: var(--text-primary);">MiniLLM 評測數值</th>
+                            <th style="padding: 12px; color: var(--text-primary);">說明</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Embedding Dimension (d_model)</td>
+                            <td style="padding: 12px;">128 / 64</td>
+                            <td style="padding: 12px;">隱層向量維度</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Attention Heads (n_heads)</td>
+                            <td style="padding: 12px;">4 Heads</td>
+                            <td style="padding: 12px;">多頭注意力頭數</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">KV Head Groups (num_kv_groups)</td>
+                            <td style="padding: 12px;">2 Groups</td>
+                            <td style="padding: 12px;">GQA 分組查詢共享 Key/Value 比例</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">FFN Hidden Dimension</td>
+                            <td style="padding: 12px;">256 / 128</td>
+                            <td style="padding: 12px;">SwiGLU 中間層維度</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Hardware Environment</td>
+                            <td style="padding: 12px; color: #10b981;">Pure Intel CPU (Zero GPU)</td>
+                            <td style="padding: 12px;">完全不需要 NVIDIA GPU 顯卡即開即跑</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <footer>
+        © 2026 《大語言模型工作原理與實作》專案前端視覺化系統 · Powered by Vanilla CSS & PyTorch CPU
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        let currentPrompt = "宴桃園";
+
+        const tiersData = {
+            nano: {
+                name: "Nano Spec (78.9K)",
+                vocab: 38,
+                d_model: 64,
+                n_layers: 2,
+                n_heads: 4,
+                num_kv_groups: 2,
+                hidden_dim: 128,
+                total_params: "78,912",
+                embed_formula: "38 × 64",
+                embed_params: "2,432",
+                embed_pct: "3.1%",
+                block_formula: "2 × (12.2K + 24.5K + 128)",
+                block_params: "74,048",
+                block_pct: "93.8%",
+                head_formula: "64 + (64 × 38)",
+                head_params: "2,432",
+                head_pct: "3.1%",
+                total_formula: "2,432 + 74,048 + 2,432",
+                memory_formula: "FP32: 0.30 MB | INT4: 0.04 MB",
+                hardware: "輕量 CPU (<1ms)",
+                flops: "~0.16 MFLOPs"
+            },
+            micro: {
+                name: "Micro Spec (864.8K)",
+                vocab: 6178,
+                d_model: 64,
+                n_layers: 2,
+                n_heads: 4,
+                num_kv_groups: 2,
+                hidden_dim: 128,
+                total_params: "864,832",
+                embed_formula: "6,178 × 64",
+                embed_params: "395,392",
+                embed_pct: "45.7%",
+                block_formula: "2 × (12.3K + 24.6K + 128)",
+                block_params: "73,984",
+                block_pct: "8.6%",
+                head_formula: "64 + (64 × 6,178)",
+                head_params: "395,456",
+                head_pct: "45.7%",
+                total_formula: "395,392 + 73,984 + 395,456",
+                memory_formula: "FP32: 3.30 MB | INT4: 0.41 MB",
+                hardware: "筆電 CPU (幾毫秒)",
+                flops: "~1.73 MFLOPs"
+            },
+            sanguo_mini: {
+                name: "A 組對照 — Mini @《三國演義》5 萬字",
+                vocab: 6178,
+                d_model: 128,
+                n_layers: 3,
+                n_heads: 4,
+                num_kv_groups: 2,
+                hidden_dim: 256,
+                total_params: "2,024,832",
+                embed_formula: "6,178 × 128",
+                embed_params: "790,784",
+                embed_pct: "39.1%",
+                block_formula: "3 × (49.2K + 98.3K + 256)",
+                block_params: "443,136",
+                block_pct: "21.9%",
+                head_formula: "128 + (128 × 6,178)",
+                head_params: "790,912",
+                head_pct: "39.1%",
+                total_formula: "790,784 + 443,136 + 790,912",
+                memory_formula: "FP32: 7.72 MB | INT4: 0.97 MB",
+                hardware: "擴語料實驗 A 組：與 Mini 結構完全相同，只餵 5 萬字",
+                flops: "~4.05 MFLOPs"
+            },
+            mini: {
+                name: "Mini Spec (2.02M - 主推)",
+                vocab: 6178,
+                d_model: 128,
+                n_layers: 3,
+                n_heads: 4,
+                num_kv_groups: 2,
+                hidden_dim: 256,
+                total_params: "2,024,832",
+                embed_formula: "6,178 × 128",
+                embed_params: "790,784",
+                embed_pct: "39.1%",
+                block_formula: "3 × (49.2K + 98.3K + 256)",
+                block_params: "443,136",
+                block_pct: "21.9%",
+                head_formula: "128 + (128 × 6,178)",
+                head_params: "790,912",
+                head_pct: "39.1%",
+                total_formula: "790,784 + 443,136 + 790,912",
+                memory_formula: "FP32: 7.72 MB | INT4: 0.97 MB",
+                hardware: "擴語料實驗 B 組：四大名著全語料 291 萬字",
+                flops: "~4.05 MFLOPs"
+            },
+            mini_chat: {
+                name: "Mini Chat Assistant (2.02M SFT對齊版)",
+                vocab: 6178,
+                d_model: 128,
+                n_layers: 3,
+                n_heads: 4,
+                num_kv_groups: 2,
+                hidden_dim: 256,
+                total_params: "2,024,832",
+                embed_formula: "6,178 × 128",
+                embed_params: "790,784",
+                embed_pct: "39.1%",
+                block_formula: "3 × (49.2K + 98.3K + 256)",
+                block_params: "443,136",
+                block_pct: "21.9%",
+                head_formula: "128 + (128 × 6,178)",
+                head_params: "790,912",
+                head_pct: "39.1%",
+                total_formula: "790,784 + 443,136 + 790,912",
+                memory_formula: "FP32: 7.72 MB | INT4: 0.97 MB",
+                hardware: "SFT 對齊 Chat Assistant (精確問答版)",
+                flops: "~4.05 MFLOPs"
+            },
+            mini_dpo: {
+                name: "Mini DPO 對齊版 (2.02M)",
+                vocab: 6178,
+                d_model: 128,
+                n_layers: 3,
+                n_heads: 4,
+                num_kv_groups: 2,
+                hidden_dim: 256,
+                total_params: "2,024,832",
+                embed_formula: "6,178 × 128",
+                embed_params: "790,784",
+                embed_pct: "39.1%",
+                block_formula: "3 × (49.2K + 98.3K + 256)",
+                block_params: "443,136",
+                block_pct: "21.9%",
+                head_formula: "128 + (128 × 6,178)",
+                head_params: "790,912",
+                head_pct: "39.1%",
+                total_formula: "790,784 + 443,136 + 790,912",
+                memory_formula: "FP32: 7.72 MB | INT4: 0.97 MB",
+                hardware: "三階段對齊最後一步 (§10.5 DPO 偏好優化)",
+                flops: "~4.05 MFLOPs"
+            },
+            base: {
+                name: "Base Spec (6.71M)",
+                vocab: 6178,
+                d_model: 256,
+                n_layers: 6,
+                n_heads: 8,
+                num_kv_groups: 4,
+                hidden_dim: 512,
+                total_params: "6,705,408",
+                embed_formula: "6,178 × 256",
+                embed_params: "1,581,568",
+                embed_pct: "23.6%",
+                block_formula: "6 × (196.6K + 393.2K + 512)",
+                block_params: "3,542,016",
+                block_pct: "52.8%",
+                head_formula: "256 + (256 × 6,178)",
+                head_params: "1,581,824",
+                head_pct: "23.6%",
+                total_formula: "1,581,568 + 3,542,016 + 1,581,824",
+                memory_formula: "FP32: 25.58 MB | INT4: 3.20 MB",
+                hardware: "單核 CPU 流暢運算",
+                flops: "~13.41 MFLOPs"
+            },
+            llama7b: {
+                name: "LLaMA 3 (8B / 8.03B)",
+                vocab: 128256,
+                d_model: 4096,
+                n_layers: 32,
+                n_heads: 32,
+                num_kv_groups: 8,
+                hidden_dim: 14336,
+                total_params: "8,030,261,248",
+                embed_formula: "128,256 × 4,096",
+                embed_params: "525,336,576",
+                embed_pct: "6.5%",
+                block_formula: "32 × (50.3M + 176.1M + 8,192)",
+                block_params: "6,979,588,096",
+                block_pct: "86.9%",
+                head_formula: "4,096 + (4,096 × 128,256)",
+                head_params: "525,336,576",
+                head_pct: "6.5%",
+                total_formula: "525M + 6.97B + 525M",
+                memory_formula: "FP16: 16.06 GB | INT4: 4.01 GB",
+                hardware: "需 NVIDIA GPU 顯卡",
+                flops: "~16.06 GFLOPs"
+            }
+        };
+
+        const textCorpus = {
+            "宴桃園豪傑三結義": ["宴桃園", "豪傑", "三結義", "，", "張飛", "、", "關羽", "與", "劉備", "誓為", "兄弟", "，", "同心", "協力", "，", "救困", "扶危", "。", "第一回", "章", "展現", "忠義", "情懷", "。"],
+            "曹操鏖兵攻打赤壁": ["曹操", "鏖兵", "攻打", "赤壁", "，", "斬護送", "賄", "大勝", "，", "一人", "獨領", "大軍", "，", "威震", "華夏", "。"],
+            "劉備率軍前往徐州": ["劉備", "率領", "大軍", "前往", "徐州", "，", "關張", "隨行", "，", "百姓", "歡呼", "接迎", "。"],
+            "武松景陽岡怒打猛虎": ["武松", "景陽岡", "怒打", "猛虎", "，", "手起", "拳落", "，", "威名", "遠播", "，", "封建", "陽城", "讚譽", "。"],
+            "寶玉賈府重逢黛玉": ["寶玉", "重逢", "黛玉", "，", "前世", "木石", "前盟", "，", "百官", "皆", "讚歎", "奇緣", "。"],
+            "悟空大鬧天宮戰天兵": ["悟空", "大鬧", "天宮", "，", "手持", "金箍棒", "，", "戰", "十萬", "天兵", "，", "威風", "凜凜", "。"]
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section-pane').forEach(pane => pane.classList.remove('active'));
+
+            event.currentTarget.classList.add('active');
+            document.getElementById('pane-' + tabId).classList.add('active');
+
+            if(tabId === 'training') {
+                initCharts();
+            }
+        }
+
+        function selectTier(key) {
+            currentModelTier = key;
+
+            // 1. 同步卡片高亮狀態
+            document.querySelectorAll('.tier-card').forEach(card => card.classList.remove('active'));
+            const cardEl = document.getElementById('card-' + key);
+            if (cardEl) cardEl.classList.add('active');
+
+            // 2. 同步生成區按鈕高亮狀態
+            document.querySelectorAll('#btn-tier-sanguo_mini, #btn-tier-micro, #btn-tier-mini, #btn-tier-mini_chat, #btn-tier-mini_dpo, #btn-tier-base').forEach(btn => btn.classList.remove('active'));
+            const btnEl = document.getElementById('btn-tier-' + key);
+            if (btnEl) btnEl.classList.add('active');
+
+            const data = tiersData[key];
+            if (!data) return;
+            document.getElementById('tier-display-name').innerText = data.name;
+            document.getElementById('calc-embed-formula').innerText = data.embed_formula;
+            document.getElementById('calc-embed-params').innerText = data.embed_params;
+            document.getElementById('calc-embed-pct').innerText = data.embed_pct;
+
+            document.getElementById('calc-block-formula').innerText = data.block_formula;
+            document.getElementById('calc-block-params').innerText = data.block_params;
+            document.getElementById('calc-block-pct').innerText = data.block_pct;
+
+            document.getElementById('calc-head-formula').innerText = data.head_formula;
+            document.getElementById('calc-head-params').innerText = data.head_params;
+            document.getElementById('calc-head-pct').innerText = data.head_pct;
+
+            document.getElementById('calc-total-formula').innerText = data.total_formula;
+            document.getElementById('calc-total-params').innerText = data.total_params;
+
+            document.getElementById('calc-memory-formula').innerText = data.memory_formula;
+            document.getElementById('calc-hardware').innerText = data.hardware;
+            document.getElementById('calc-flops').innerText = data.flops;
+
+            document.getElementById('demo-stat-params').innerText = data.total_params;
+            document.getElementById('demo-stat-vocab').innerText = data.vocab.toLocaleString() + " Tokens";
+
+            // 3. 更新 Python 命令提示
+            const cmdText = document.getElementById('tier-cmd-text');
+            if (cmdText) {
+                const cmds = {
+                    sanguo_mini: "python train_corpus_experiment.py   # A 組：Mini @ 三國 5 萬字",
+                    mini:        "python train_corpus_experiment.py   # B 組：Mini @ 全語料 291 萬字",
+                    mini_chat:   "python train_sft_chat_model.py      # 以 B 組為基底做 SFT 對齊",
+                    mini_dpo:    "python train_dpo_alignment.py       # 在 SFT 之上做 DPO 偏好對齊",
+                    micro:       "python train_corpus_experiment.py   # Micro @ 全語料",
+                    base:        "python train_corpus_experiment.py   # Base @ 全語料"
+                };
+                if (cmds[key]) cmdText.innerText = cmds[key];
+            }
+        }
+
+        function selectPrompt(promptText) {
+            currentPrompt = promptText;
+            document.getElementById('custom-prompt-input').value = promptText;
+            document.querySelectorAll('.prompt-selector .chip-btn').forEach(btn => btn.classList.remove('active'));
+            if(event && event.currentTarget) event.currentTarget.classList.add('active');
+
+            const term = document.getElementById('terminal-out');
+            term.innerHTML = `<span class="token prompt-token">${promptText}</span>`;
+        }
+
+        function updatePromptFromInput(val) {
+            currentPrompt = val.trim() || "宴桃園";
+            const term = document.getElementById('terminal-out');
+            term.innerHTML = `<span class="token prompt-token">${currentPrompt}</span>`;
+        }
+
+        function switchModelTier(tier) {
+            const cmdText = document.getElementById('tier-cmd-text');
+            
+            // 更新按鈕高亮聚焦狀態
+            if (event && event.currentTarget) {
+                const btnContainer = event.currentTarget.parentElement;
+                if (btnContainer) {
+                    btnContainer.querySelectorAll('.chip-btn').forEach(btn => btn.classList.remove('active'));
+                    event.currentTarget.classList.add('active');
+                }
+            }
+
+            // selectTier 內部已負責更新 tier-cmd-text 與卡片高亮，這裡只需轉發
+            selectTier(tier);
+            currentModelTier = tier;
+        }
+
+        async function startGeneration() {
+            const term = document.getElementById('terminal-out');
+            const promptText = document.getElementById('custom-prompt-input').value.trim() || currentPrompt || "宴桃園";
+            term.innerHTML = `<span class="token prompt-token">${promptText}</span> <span style="color: var(--accent-amber);">[⚡ 後端 PyTorch 推論計算中...]</span>`;
+
+            const temp = parseFloat(document.getElementById('temp-slider').value);
+            const topK = parseInt(document.getElementById('topk-slider').value);
+            const maxTokens = parseInt(document.getElementById('tokens-slider').value);
+            const activeTier = typeof currentModelTier !== 'undefined' ? currentModelTier : 'mini';
+
+            try {
+                // 發送 POST 請求至 Python 後端 API
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: promptText,
+                        tier: activeTier,
+                        temperature: temp,
+                        top_k: topK,
+                        max_tokens: maxTokens
+                    })
+                });
+
+                const data = await res.json();
+                if (data.status === 'success') {
+                    term.innerHTML = `<span class="token prompt-token">${promptText}</span> `;
+                    const tokens = data.tokens || [];
+                    
+                    let idx = 0;
+                    const interval = setInterval(() => {
+                        if (idx < tokens.length) {
+                            const span = document.createElement('span');
+                            span.className = 'token';
+                            span.innerText = tokens[idx];
+                            term.appendChild(span);
+                            idx++;
+                        } else {
+                            clearInterval(interval);
+                            const infoSpan = document.createElement('div');
+                            infoSpan.style.cssText = "margin-top: 10px; font-size: 12px; color: var(--accent-green); font-family: 'Inter', sans-serif;";
+                            infoSpan.innerText = `✅ [後端聯動成功] 模型: ${data.tier.toUpperCase()} (${data.total_params} 參數) | 耗時: ${data.latency_ms} ms`;
+                            term.appendChild(infoSpan);
+                        }
+                    }, 80);
+                } else {
+                    term.innerHTML += `<span style="color: #ef4444;"> [Error: ${data.message}]</span>`;
+                }
+            } catch (err) {
+                term.innerHTML += `<span style="color: #ef4444;"> [API 請求失敗: ${err.message}]</span>`;
+            }
+        }
+
+        function initCharts() {
+            const ctx1 = document.getElementById('sanguoChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Epoch 1', 'Epoch 2', 'Epoch 3'],
+                    datasets: [{
+                        label: 'Pretraining Loss',
+                        data: [7.7291, 6.6931, 5.8129],
+                        borderColor: '#00f2fe',
+                        backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' } },
+                        y: { ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('combinedChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: ['Epoch 1', 'Epoch 2', 'Epoch 3', 'Epoch 4', 'Epoch 5'],
+                    datasets: [{
+                        label: 'Pretraining Loss',
+                        data: [6.1513, 4.8492, 4.2247, 3.8067, 3.4618],
+                        borderColor: '#7f00ff',
+                        backgroundColor: 'rgba(127, 0, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' } },
+                        y: { ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

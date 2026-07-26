@@ -1,0 +1,38 @@
+# ============================================================================
+#  《大語言模型工作原理與實作》隨書程式碼倉庫 — 版控排除規則
+#  本倉庫是給讀者查看隨書程式碼用的，書稿本體與成品書一律不進版控。
+# ============================================================================
+
+# ── 書稿與成品書：mooPub / Readmoo 獨家發行，不得進入公開倉庫 ──
+# 用目錄級排除而非副檔名，因為 manuscripts/ 底下的 book_publication_template.html
+# 副檔名雖是 .html，實際內含約 3.5 萬字書籍正文，靠副檔名規則擋不住。
+manuscripts/
+plans/
+*.pdf
+*.epub
+*.mobi
+
+# 排版工具鏈（讀者用不到，且與書稿綁定）
+generate_pdf_book.py
+generate_pdf_weasyprint.py
+
+# 撰稿過程的工作截圖
+sec95_table_fixed.png
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ── 模型權重：一律走 GitHub Releases，不進 Git 歷史 ──
+# 六份權重合計約 60 MB。二進位檔一旦 commit 就永久留在歷史裡無法移除，
+# 之後每個讀者 clone 都得整包拖下來，所以改以 Releases 附件發佈。
+# 下載後解壓到 checkpoints/ 即可，server.py 找不到權重時會印出下載網址。
+checkpoints/*.pt
+
+# 編輯器
+.vscode/
+.idea/
+*.swp
+.DS_Store
