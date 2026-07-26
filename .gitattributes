@@ -1,0 +1,35 @@
+# ============================================================================
+#  換行符與檔案類型正規化
+#  倉庫內一律以 LF 儲存，checkout 時各平台自動還原成慣用格式，
+#  避免 Windows / Linux / macOS 讀者之間出現整檔換行符 diff。
+# ============================================================================
+
+* text=auto
+
+# ── 明確標記文字檔（副檔名判斷，避免誤判成二進位）──
+*.py    text diff=python
+*.md    text
+*.txt   text
+*.json  text
+*.html  text diff=html
+*.css   text
+*.js    text
+
+# 語料檔在磁碟上是 CRLF，倉庫內存為 LF。
+# 這不影響訓練重現性：code/corpus_util.py 以文字模式讀檔，
+# Python 的 universal newlines 會把 CRLF 正規化成 LF，
+# 兩種版本讀進來是完全相同的字串（同為 2,915,206 字，詞表一致）。
+
+# ── 二進位檔：不做任何換行符轉換，也不產生無意義的 diff ──
+*.pt    binary
+*.pth   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.pdf   binary
+*.epub  binary
+*.zip   binary
+*.ttf   binary
+*.woff  binary
+*.woff2 binary
