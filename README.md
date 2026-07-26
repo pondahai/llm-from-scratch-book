@@ -115,9 +115,9 @@ llm_book_project/
 │   ├── code_ch10_quantization.py        # 第 10.4 節：INT8 動態量化實測
 │   ├── code_ch11_spec.py                # 第 11 章：Model Card 規格分析
 │   │
-│   │                                    # ↓ §9.6「漸進式體驗流程」四階段用到的腳本
-│   ├── llm_from_scratch_mindmap.py      # 階段 1：Nano 規格極速初體驗（78.9K 參數）
-│   ├── train_sanguo_llm.py              # 階段 2：《三國演義》單本文風訓練
+│   │                                    # ↓ §9.6「4-Step 體驗路徑」四階段用到的腳本
+│   ├── llm_from_scratch_mindmap.py      # 階段 1：Nano 規格極速初體驗（78,912 參數 / 約 5 秒）
+│   ├── train_sanguo_llm.py              # 階段 2：《三國演義》前 2 萬字文風訓練（約 13 秒）
 │   ├── train_all_four_novels_live.py    # 階段 3：四大名著合集聯合預訓練
 │   └── fetch_wikisource_books.py        # 維基文庫語料自動化爬取腳本
 │

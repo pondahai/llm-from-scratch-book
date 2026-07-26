@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MiniLLM《大語言模型工作原理與實作》互動視覺化前端</title>
+    <!-- 印刷截圖模式：網址加 ?print=1 切換（需在樣式套用前執行，避免閃爍） -->
+    <script>
+        if (new URLSearchParams(location.search).has('print')) {
+            document.documentElement.dataset.theme = 'print';
+        }
+    </script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -458,6 +464,162 @@
             border-top: 1px solid var(--border-color);
             margin-top: auto;
         }
+
+        /* ========================================================
+           印刷截圖模式 (Print Screenshot Mode)
+           啟用：index.html?print=1
+           色票對齊《圖書美編與排版規格說明書》§1.2 CMYK 色彩規範。
+           版面結構與字級完全不動，僅換配色，確保書上的圖與讀者
+           螢幕上的深色版是「同一張圖的兩種上色」。
+           ======================================================== */
+
+        :root[data-theme="print"] {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F1F5F9;
+            --bg-card: #F8FAFC;              /* §1.2 代碼灰階底面 */
+            --border-color: #CBD5E1;
+
+            --accent-cyan: #1E3A8A;          /* §1.2 科技主藍 */
+            --accent-blue: #2563EB;          /* §1.2 寶藍實證藍 */
+            --accent-purple: #5B21B6;
+            --accent-magenta: #A21CAF;
+            --accent-amber: #D97706;         /* §1.2 琥珀比喻金 */
+            --accent-green: #059669;         /* §1.2 翡翠心智圖綠 */
+
+            --text-primary: #0F172A;         /* §1.2 夜空深藍 */
+            --text-secondary: #475569;
+            --text-muted: #64748B;
+
+            --shadow-glow: none;
+        }
+
+        /* 移除螢幕感效果：背景光暈、毛玻璃、發光陰影 */
+        :root[data-theme="print"] body {
+            background-image: none;
+        }
+
+        :root[data-theme="print"] header,
+        :root[data-theme="print"] .card {
+            backdrop-filter: none;
+        }
+
+        :root[data-theme="print"] header {
+            background: var(--bg-secondary);
+        }
+
+        :root[data-theme="print"] .card {
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+        }
+
+        /* 漸層標題的白色起點在白底會消失，改為實心主藍 */
+        :root[data-theme="print"] .title-group h1 {
+            background: none;
+            -webkit-background-clip: initial;
+            -webkit-text-fill-color: initial;
+            color: var(--accent-cyan);
+        }
+
+        /* 深底上的白色半透明疊層 → 換白底後會隱形，翻成黑色半透明 */
+        :root[data-theme="print"] .nav-btn:hover,
+        :root[data-theme="print"] .chip-btn:not(:hover):not(.active),
+        :root[data-theme="print"] input[type="range"] {
+            background: rgba(15, 23, 42, 0.05);
+        }
+
+        /* 選中/hover 的 chip 需維持實心深底，才撐得住白字 */
+        :root[data-theme="print"] .chip-btn:hover,
+        :root[data-theme="print"] .chip-btn.active {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-color: transparent;
+        }
+
+        :root[data-theme="print"] .tier-card,
+        :root[data-theme="print"] .stat-box,
+        :root[data-theme="print"] .arch-node {
+            background: rgba(15, 23, 42, 0.03);
+        }
+
+        :root[data-theme="print"] .nav-btn.active {
+            background: rgba(30, 58, 138, 0.08);
+        }
+
+        :root[data-theme="print"] .tier-card:hover,
+        :root[data-theme="print"] .tier-card.active {
+            background: rgba(30, 58, 138, 0.08);
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.10);
+            transform: none;                 /* 截圖不位移，避免與鄰欄失準 */
+        }
+
+        :root[data-theme="print"] .arch-node:hover {
+            background: rgba(30, 58, 138, 0.05);
+        }
+
+        /* 實心強調色按鈕：底色轉深，字要翻白 */
+        :root[data-theme="print"] .logo-icon,
+        :root[data-theme="print"] .chip-btn:hover,
+        :root[data-theme="print"] .chip-btn.active,
+        :root[data-theme="print"] .run-btn {
+            color: #FFFFFF;
+        }
+
+        :root[data-theme="print"] .logo-icon,
+        :root[data-theme="print"] .run-btn {
+            box-shadow: none;
+        }
+
+        :root[data-theme="print"] .run-btn:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        :root[data-theme="print"] .terminal {
+            background: #F1F5F9;
+            color: var(--text-primary);
+        }
+
+        :root[data-theme="print"] .status-badge {
+            background: #ECFDF5;             /* §1.2 翡翠綠底 */
+            border-color: var(--accent-green);
+        }
+
+        :root[data-theme="print"] .token {
+            background: #EFF6FF;             /* §1.2 實證藍底 */
+            border-color: rgba(30, 58, 138, 0.35);
+            animation: none;                 /* 避免截到淡入中間影格 */
+        }
+
+        :root[data-theme="print"] .token.prompt-token {
+            background: #FEF3C7;             /* §1.2 琥珀金底 */
+            border-color: rgba(217, 119, 6, 0.40);
+        }
+
+        :root[data-theme="print"] .pulse-dot {
+            animation: none;
+        }
+
+        /* 以下為 HTML 標籤上的 inline style，須用 !important 才蓋得掉 */
+        :root[data-theme="print"] td[style*="#fff"] {
+            color: var(--text-primary) !important;
+        }
+
+        :root[data-theme="print"] td[style*="#10b981"] {
+            color: var(--accent-green) !important;
+        }
+
+        :root[data-theme="print"] tr[style*="rgba(79, 172, 254"] {
+            background: #EFF6FF !important;
+        }
+
+        :root[data-theme="print"] #tier-cmd-box {
+            background: #F8FAFC !important;
+            border-color: rgba(30, 58, 138, 0.35) !important;
+        }
+
+        :root[data-theme="print"] #custom-prompt-input {
+            background: #FFFFFF !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+        }
     </style>
 </head>
 <body>
@@ -561,7 +723,7 @@
                     <div class="card-header">
                         <div class="card-title">
                             <i data-lucide="calculator" style="color: var(--accent-purple);"></i>
-                            當前選擇參數量等級：<span id="tier-display-name" style="color: var(--accent-cyan);">Mini Spec (1.08M)</span> 精確分解
+                            當前選擇參數量等級：<span id="tier-display-name" style="color: var(--accent-cyan);">Mini Spec (2.02M - 主推)</span> 精確分解
                         </div>
                     </div>
 
@@ -575,14 +737,14 @@
                         <tr style="border-bottom: 1px solid var(--border-color);">
                             <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Token Embedding 嵌入層</td>
                             <td style="padding: 12px; font-family: 'Fira Code', monospace;" id="calc-embed-formula">6,178 × 128</td>
-                            <td style="padding: 12px; font-weight: 700; color: var(--text-primary);" id="calc-embed-params">320,640</td>
-                            <td style="padding: 12px;" id="calc-embed-pct">29.6%</td>
+                            <td style="padding: 12px; font-weight: 700; color: var(--text-primary);" id="calc-embed-params">790,784</td>
+                            <td style="padding: 12px;" id="calc-embed-pct">39.1%</td>
                         </tr>
                         <tr style="border-bottom: 1px solid var(--border-color);">
                             <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Transformer Blocks (層數 N)</td>
-                            <td style="padding: 12px; font-family: 'Fira Code', monospace;" id="calc-block-formula">3 × (49K + 98K + 256)</td>
+                            <td style="padding: 12px; font-family: 'Fira Code', monospace;" id="calc-block-formula">3 × (49.2K + 98.3K + 256)</td>
                             <td style="padding: 12px; font-weight: 700; color: var(--text-primary);" id="calc-block-params">443,136</td>
-                            <td style="padding: 12px;" id="calc-block-pct">40.9%</td>
+                            <td style="padding: 12px;" id="calc-block-pct">21.9%</td>
                         </tr>
                         <tr style="border-bottom: 1px solid var(--border-color);">
                             <td style="padding: 12px; font-weight: 600; color: var(--accent-cyan);">Final RMSNorm & LM Head</td>
@@ -1107,6 +1269,21 @@
             currentModelTier = tier;
         }
 
+        /**
+         * 取得本次生成要用的隨機種子。
+         *   ?seed=42     → 固定 42（書中截圖與讀者複現用）
+         *   ?print=1     → 未另外指定時預設 42，確保截圖可重現
+         *   其他情況     → null，由後端隨機播種（並於回應中回報實際種子）
+         */
+        function getFixedSeed() {
+            const q = new URLSearchParams(location.search);
+            if (q.has('seed')) {
+                const n = parseInt(q.get('seed'), 10);
+                return Number.isNaN(n) ? null : n;
+            }
+            return document.documentElement.dataset.theme === 'print' ? 42 : null;
+        }
+
         async function startGeneration() {
             const term = document.getElementById('terminal-out');
             const promptText = document.getElementById('custom-prompt-input').value.trim() || currentPrompt || "宴桃園";
@@ -1127,7 +1304,8 @@
                         tier: activeTier,
                         temperature: temp,
                         top_k: topK,
-                        max_tokens: maxTokens
+                        max_tokens: maxTokens,
+                        seed: getFixedSeed()          // null = 隨機；書中截圖用固定種子
                     })
                 });
 
@@ -1148,7 +1326,7 @@
                             clearInterval(interval);
                             const infoSpan = document.createElement('div');
                             infoSpan.style.cssText = "margin-top: 10px; font-size: 12px; color: var(--accent-green); font-family: 'Inter', sans-serif;";
-                            infoSpan.innerText = `✅ [後端聯動成功] 模型: ${data.tier.toUpperCase()} (${data.total_params} 參數) | 耗時: ${data.latency_ms} ms`;
+                            infoSpan.innerText = `✅ [後端聯動成功] 模型: ${data.tier.toUpperCase()} (${data.total_params} 參數) | 耗時: ${data.latency_ms} ms | seed: ${data.seed}`;
                             term.appendChild(infoSpan);
                         }
                     }, 80);
@@ -1161,6 +1339,17 @@
         }
 
         function initCharts() {
+            // Chart.js 畫在 canvas 上，CSS 無法覆蓋，故在此依主題切換配色
+            const isPrint = document.documentElement.dataset.theme === 'print';
+            const chartColors = {
+                line1:      isPrint ? '#1E3A8A' : '#00f2fe',
+                line1Fill:  isPrint ? 'rgba(30, 58, 138, 0.10)' : 'rgba(0, 242, 254, 0.1)',
+                line2:      isPrint ? '#5B21B6' : '#7f00ff',
+                line2Fill:  isPrint ? 'rgba(91, 33, 182, 0.10)' : 'rgba(127, 0, 255, 0.1)',
+                tick:       isPrint ? '#475569' : '#94a3b8',
+                grid:       isPrint ? 'rgba(15, 23, 42, 0.10)' : 'rgba(255, 255, 255, 0.1)'
+            };
+
             const ctx1 = document.getElementById('sanguoChart').getContext('2d');
             new Chart(ctx1, {
                 type: 'line',
@@ -1169,18 +1358,18 @@
                     datasets: [{
                         label: 'Pretraining Loss',
                         data: [7.7291, 6.6931, 5.8129],
-                        borderColor: '#00f2fe',
-                        backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                        borderColor: chartColors.line1,
+                        backgroundColor: chartColors.line1Fill,
                         fill: true,
                         tension: 0.3
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    plugins: { legend: { labels: { color: chartColors.tick } } },
                     scales: {
-                        x: { ticks: { color: '#94a3b8' } },
-                        y: { ticks: { color: '#94a3b8' } }
+                        x: { ticks: { color: chartColors.tick }, grid: { color: chartColors.grid } },
+                        y: { ticks: { color: chartColors.tick }, grid: { color: chartColors.grid } }
                     }
                 }
             });
@@ -1193,22 +1382,26 @@
                     datasets: [{
                         label: 'Pretraining Loss',
                         data: [6.1513, 4.8492, 4.2247, 3.8067, 3.4618],
-                        borderColor: '#7f00ff',
-                        backgroundColor: 'rgba(127, 0, 255, 0.1)',
+                        borderColor: chartColors.line2,
+                        backgroundColor: chartColors.line2Fill,
                         fill: true,
                         tension: 0.3
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    plugins: { legend: { labels: { color: chartColors.tick } } },
                     scales: {
-                        x: { ticks: { color: '#94a3b8' } },
-                        y: { ticks: { color: '#94a3b8' } }
+                        x: { ticks: { color: chartColors.tick }, grid: { color: chartColors.grid } },
+                        y: { ticks: { color: chartColors.tick }, grid: { color: chartColors.grid } }
                     }
                 }
             });
         }
+
+        // 初始渲染：頁面載入時就依 tiersData 填一次規格表。
+        // 否則顯示的是 HTML 裡寫死的初始值，與實際規格不一致。
+        selectTier('mini');
     </script>
 </body>
 </html>

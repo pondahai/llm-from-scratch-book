@@ -45,16 +45,18 @@ def get_model_config(tier_name: str, vocab_size: int):
     """根據書本 9.5 節與 11.1 節定義不同參數量等級規格 (完全相容 nano/micro/mini/base/large)"""
     t = tier_name.lower().strip()
     if t in ["nano", "micro", "lite"]:
-        # 372K 參數 Micro Spec (d=64, N=2, h=4, g=2, ffn=128)
+        # Micro Spec (d=64, N=2, h=4, g=2, ffn=128) → 864,832 參數 @ V=6178
         return MiniLLM(vocab_size=vocab_size, d_model=64, n_layers=2, n_heads=4, num_kv_groups=2, hidden_dim=128)
     elif t in ["mini", "plus"]:
-        # 1.08M 參數 Mini Spec (d=128, N=3, h=4, g=2, ffn=256 - 本書主推)
+        # Mini Spec (d=128, N=3, h=4, g=2, ffn=256 - 本書主推) → 2,024,832 參數 @ V=6178
         return MiniLLM(vocab_size=vocab_size, d_model=128, n_layers=3, n_heads=4, num_kv_groups=2, hidden_dim=256)
     elif t == "base":
-        # 4.82M 參數 Base Spec (d=256, N=6, h=8, g=4, ffn=512)
+        # Base Spec (d=256, N=6, h=8, g=4, ffn=512) → 6,705,408 參數 @ V=6178
         return MiniLLM(vocab_size=vocab_size, d_model=256, n_layers=6, n_heads=8, num_kv_groups=4, hidden_dim=512)
     elif t == "large":
-        # 48.2M 參數 Large Spec (d=512, N=12, h=16, g=4, ffn=2048 - Scaling Law 對比組)
+        # Large Spec (d=512, N=12, h=16, g=4, ffn=2048) → 51,952,128 參數 @ V=6178
+        # ⚠️ 本書已放棄此規格，不隨書提供權重：純 CPU 以四大名著全語料訓練約需 19 小時，
+        #    超出「家用筆電當天跑完」的設計前提。此設定僅供有 GPU 的讀者自行擴充參考 (見 §9.9)。
         return MiniLLM(vocab_size=vocab_size, d_model=512, n_layers=12, n_heads=16, num_kv_groups=4, hidden_dim=2048)
     else:
         return MiniLLM(vocab_size=vocab_size, d_model=128, n_layers=3, n_heads=4, num_kv_groups=2, hidden_dim=256)
@@ -101,8 +103,8 @@ def demo_chapter9(tier: str = "mini"):
     
     print(f"  • 訓練規格 Tier      : {tier.upper()}")
     print(f"  • 訓練語料來源       : {data_name}")
-    print(f"  • 詞表大小 (Vocab)   : {tokenizer.vocab_size} (V=2505 吻合)")
-    print(f"  • 模型總參數量       : {total_params:,} 個參數 (1.08M 吻合)")
+    print(f"  • 詞表大小 (Vocab)   : {tokenizer.vocab_size}")
+    print(f"  • 模型總參數量       : {total_params:,} 個參數")
     print(f"  • 訓練樣本總數       : {len(dataset)} 個 (Seq Length=32)")
     print("\n  🚀 開始純 CPU 本地預訓練 (5 Epochs):")
     

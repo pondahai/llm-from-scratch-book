@@ -57,10 +57,10 @@ def get_real_pytorch_model(tier_name: str):
     vocab_size = TOKENIZER.vocab_size
 
     if tier_name == "micro":
-        # Micro 規格 (372K 參數)
+        # Micro 規格 (864,832 參數 @ V=6178)
         model = MiniLLM(vocab_size=vocab_size, d_model=64, n_layers=2, n_heads=4, num_kv_groups=2, hidden_dim=128)
     elif tier_name in ("mini", "mini_chat", "mini_dpo"):
-        # Mini 規格 (1.08M 參數 - 主推 Base / Chat)
+        # Mini 規格 (2,024,832 參數 @ V=6178 - 主推 Base / Chat)
         model = MiniLLM(vocab_size=vocab_size, d_model=128, n_layers=3, n_heads=4, num_kv_groups=2, hidden_dim=256)
     elif tier_name == "base":
         # Base 規格 (6.71M 參數 @ V=6178)
@@ -163,7 +163,9 @@ class LinkedLLMRequestHandler(BaseHTTPRequestHandler):
                 top_k = int(payload.get("top_k", 5))
                 max_tokens = int(payload.get("max_tokens", 30))
 
-                print(f"   參數: prompt='{prompt}', tier='{tier}', temp={temperature}, top_k={top_k}", flush=True)
+                seed_raw = payload.get("seed", None)
+
+                print(f"   參數: prompt='{prompt}', tier='{tier}', temp={temperature}, top_k={top_k}, seed={seed_raw}", flush=True)
                 start_time = time.time()
 
                 # 1. 取得真實 PyTorch 後端模型
@@ -173,8 +175,17 @@ class LinkedLLMRequestHandler(BaseHTTPRequestHandler):
                 # 2. 用真實 Tokenizer 將 Prompt 轉為 Token IDs
                 prompt_ids = TOKENIZER.encode(prompt, add_bos_eos=False)
 
-                # 3. 呼叫真實 PyTorch generate 推論
-                torch.seed()
+                # 3. 設定隨機種子——必須緊貼 generate() 之前。
+                #    模型首次載入時的隨機初始化會消耗 RNG，若在取得模型前播種，
+                #    冷啟動的第一次請求會與之後（走 MODEL_CACHE）的結果不一致。
+                #    未指定 seed 時隨機播種，但一律回報實際種子，讓任何一次生成都能複現。
+                if seed_raw is None or seed_raw == "":
+                    seed = torch.seed()          # 隨機播種，並回傳實際使用的種子
+                else:
+                    seed = int(seed_raw)
+                    torch.manual_seed(seed)      # 指定種子：同參數必得同結果
+
+                # 4. 呼叫真實 PyTorch generate 推論
                 gen_ids = model.generate(
                     prompt_ids=prompt_ids,
                     max_new_tokens=max_tokens,
@@ -183,7 +194,7 @@ class LinkedLLMRequestHandler(BaseHTTPRequestHandler):
                     eos_id=TOKENIZER.eos_id
                 )
 
-                # 4. 反解碼為文字與 Token 列表
+                # 5. 反解碼為文字與 Token 列表
                 generated_text = TOKENIZER.decode(gen_ids)
                 token_strings = [TOKENIZER.id2token.get(idx, "<UNK>") for idx in gen_ids if idx not in (TOKENIZER.pad_id, TOKENIZER.bos_id, TOKENIZER.eos_id)]
 
@@ -197,7 +208,8 @@ class LinkedLLMRequestHandler(BaseHTTPRequestHandler):
                     "total_params": f"{total_params:,}",
                     "generated_text": generated_text,
                     "tokens": token_strings,
-                    "latency_ms": latency_ms
+                    "latency_ms": latency_ms,
+                    "seed": seed
                 }
 
                 response_bytes = json.dumps(response_data, ensure_ascii=False).encode("utf-8")
