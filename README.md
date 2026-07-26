@@ -51,6 +51,7 @@ python train_dpo_alignment.py        # DPO 偏好對齊
 | `sanguo_mini_model.pt` | 2,024,832 | 7.7 MB | A 組對照：只讀《三國演義》5 萬字 |
 | `mini_chat_model.pt` | 2,024,832 | 7.7 MB | SFT 指令對齊版 |
 | `mini_dpo_model.pt` | 2,024,832 | 7.7 MB | DPO 偏好對齊版 |
+| `moe_top1_balanced_model.pt` | 2,911,104 | 11.1 MB | §9.10 MoE 對照（4 專家 Top-1 + 負載平衡損失） |
 
 > ⚠️ **Large 規格（51.9M）不隨書提供**：純 CPU 以完整語料訓練約需 19 小時，且檔案 184 MB 超過 GitHub 單檔上限。若你有 GPU 想自行訓練，在 `train_corpus_experiment.py` 的 `SPECS` 加回 `"large": (512, 12, 16, 4, 2048)` 即可。
 
@@ -77,11 +78,26 @@ python train_dpo_alignment.py        # DPO 偏好對齊
 
 **擴模型軸**（§9.9）— 同語料、同輪數：
 
-| 規格 | 參數量 | 耗時 | Loss |
-| :--- | ---: | ---: | ---: |
-| Micro | 864,832 | 31.7 分 | 4.35 |
-| Mini | 2,024,832 | 61.9 分 | 3.97 |
-| Base | 6,705,408 | 200.2 分 | 3.50 |
+| 規格 | 參數量 | 耗時 | 訓練 Loss | 驗證困惑度 |
+| :--- | ---: | ---: | ---: | ---: |
+| Micro | 864,832 | 31.7 分 | 4.35 | 164 |
+| Mini | 2,024,832 | 61.9 分 | 3.97 | 144 |
+| Base | 6,705,408 | 200.2 分 | 3.50 | 137 |
+
+**MoE 軸**（§9.10）— 同語料、**同計算量**，只改 FFN 結構：
+
+| 組別 | 參數量 | 每 Token 激活 FFN | 訓練 Loss | 驗證 Loss | 有效專家數 | 每步耗時 |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 稠密（對照） | 2,024,832 | 294,912 | 3.9623 | 4.9667 | — | 1.00x |
+| MoE Top-1 | 2,911,104 | 294,912 | 3.9417 | 4.9611 | 2.11 / 4 | 1.27x |
+| MoE + 平衡損失 | 2,911,104 | 294,912 | 3.9046 | 4.9553 | 3.99 / 4 | 1.38x |
+
+**訓練 Loss 改善 0.058，到了沒看過的文本上只剩 0.011——80% 是背出來的。**
+
+> 📏 **驗證集**：《儒林外史》33 萬字（`data/rulin_waishi.txt`），完全沒有參與訓練。
+> 未知字率 0.58%，評估時排除。驗證 Loss 的絕對值沒有意義，只比較同一份考卷上的相對高低。
+>
+> 最極端的對照是 §9.8 的 A 組（只讀《三國演義》5 萬字）：**訓練困惑度 1.3，驗證困惑度 4,139,802。**
 
 測試環境：Intel i7-1185G7（4 核 8 緒）/ 16 GB RAM / **100% 純 CPU，無顯卡**
 
@@ -121,9 +137,16 @@ llm_book_project/
 │   ├── train_all_four_novels_live.py    # 階段 3：四大名著合集聯合預訓練
 │   └── fetch_wikisource_books.py        # 維基文庫語料自動化爬取腳本
 │
+├── train_moe_experiment.py              # §9.10 MoE 三組對照實驗
+├── analyze_moe_router.py                # §9.10 專家使用率統計（掃全語料）
+├── bench_moe_speed.py                   # §9.10 速度交錯量測
+├── fetch_validation_corpus.py           # 抓取驗證集《儒林外史》
+├── eval_validation.py                   # 在驗證集上評估所有檢查點
+│
 ├── data/
 │   ├── vocab.json                       # ★ 統一詞表（V=6,178）
 │   ├── four_great_novels_combined.txt   # 四大名著合集（291.5 萬字，公有領域）
+│   ├── rulin_waishi.txt                 # ★ 驗證集《儒林外史》（33 萬字，未參與訓練）
 │   ├── sft_chat_dataset.json            # SFT 問答資料
 │   └── dpo_preference_dataset.json      # DPO 偏好資料（24 組三元組）
 │

@@ -31,16 +31,20 @@ class MiniLLM(nn.Module):
         d_model: int = 64, 
         n_layers: int = 2, 
         n_heads: int = 4, 
-        num_kv_groups: int = 2, 
-        hidden_dim: int = 128
+        num_kv_groups: int = 2,
+        hidden_dim: int = 128,
+        use_moe: bool = False,          # 第 7 章的 MoE 開關，預設關閉（見 §9.10 實測）
+        num_experts: int = 4,
+        top_k: int = 1
     ):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed = TokenEmbedding(vocab_size, d_model)
         self.rope = RotaryPositionalEmbedding(dim=d_model // n_heads)
-        
+
         self.layers = nn.ModuleList([
-            TransformerBlock(d_model, n_heads, num_kv_groups, hidden_dim, self.rope)
+            TransformerBlock(d_model, n_heads, num_kv_groups, hidden_dim, self.rope,
+                             use_moe=use_moe, num_experts=num_experts, top_k=top_k)
             for _ in range(n_layers)
         ])
         

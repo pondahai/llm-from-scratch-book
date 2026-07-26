@@ -69,6 +69,13 @@ def get_real_pytorch_model(tier_name: str):
     elif tier_name == "sanguo_mini":
         # A 組對照：與 Mini 完全相同的結構，但只用《三國演義》5 萬字訓練
         model = MiniLLM(vocab_size=vocab_size, d_model=128, n_layers=3, n_heads=4, num_kv_groups=2, hidden_dim=256)
+    elif tier_name == "moe_mini":
+        # §9.10 MoE 對照：與 Mini 同結構，但 FFN 換成 4 專家 Top-1 (2,911,104 參數)。
+        # 採 Top-1 是為了讓每個 Token 的 FFN 計算量與 Mini 完全相同 (294,912)，
+        # 唯一的變數是容量。權重為加了負載平衡損失的那一版。
+        model = MiniLLM(vocab_size=vocab_size, d_model=128, n_layers=3, n_heads=4,
+                        num_kv_groups=2, hidden_dim=256,
+                        use_moe=True, num_experts=4, top_k=1)
     elif tier_name == "large":
         # Large 規格 (51.9M) 在純 CPU 上訓練需約 19 小時，本書不隨附此檢查點。
         raise ValueError(
@@ -84,7 +91,8 @@ def get_real_pytorch_model(tier_name: str):
     # 檢查是否已有預訓練好的 Checkpoint 檔案 (.pt)
     ckpt_dir = os.path.join(os.path.dirname(__file__), "checkpoints")
     os.makedirs(ckpt_dir, exist_ok=True)
-    special = {"mini_chat": "mini_chat_model.pt", "mini_dpo": "mini_dpo_model.pt"}
+    special = {"mini_chat": "mini_chat_model.pt", "mini_dpo": "mini_dpo_model.pt",
+               "moe_mini": "moe_top1_balanced_model.pt"}
     ckpt_filename = special.get(tier_name, f"{tier_name}_model.pt")
     ckpt_path = os.path.join(ckpt_dir, ckpt_filename)
 

@@ -1,0 +1,29 @@
+{
+ "rounds": 3,
+ "steps_per_round": 40,
+ "batch": 16,
+ "seq_len": 32,
+ "results": {
+  "dense": {
+   "step_median_s": 0.08799979998730123,
+   "step_ratio": 1.0,
+   "gen_median_s": 0.09991689992602915,
+   "gen_ratio": 1.0,
+   "samples": 105
+  },
+  "moe": {
+   "step_median_s": 0.1119876999873668,
+   "step_ratio": 1.2725903922909725,
+   "gen_median_s": 0.13409790000878274,
+   "gen_ratio": 1.342094281428453,
+   "samples": 105
+  },
+  "moe_bal": {
+   "step_median_s": 0.1210139999166131,
+   "step_ratio": 1.3751622155286258,
+   "gen_median_s": 0.13455269997939467,
+   "gen_ratio": 1.3466460636689812,
+   "samples": 105
+  }
+ }
+}

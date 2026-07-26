@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "minillm-server",
+      "runtimeExecutable": "python3.12",
+      "runtimeArgs": ["server.py"],
+      "port": 8080,
+      "autoPort": false
+    }
+  ]
+}

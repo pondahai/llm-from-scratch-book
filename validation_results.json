@@ -1,0 +1,49 @@
+{
+ "validation_set": "rulin_waishi.txt",
+ "chars": 330130,
+ "unk_rate": 0.005776512283040014,
+ "results": [
+  {
+   "checkpoint": "micro_model.pt",
+   "val_loss": 5.098964663139273,
+   "val_ppl": 163.85217725235614,
+   "scored_tokens": 328205
+  },
+  {
+   "checkpoint": "mini_model.pt",
+   "val_loss": 4.969084518887538,
+   "val_ppl": 143.89509381230636,
+   "scored_tokens": 328205
+  },
+  {
+   "checkpoint": "base_model.pt",
+   "val_loss": 4.916846082496791,
+   "val_ppl": 136.57119892686055,
+   "scored_tokens": 328205
+  },
+  {
+   "checkpoint": "sanguo_mini_model.pt",
+   "val_loss": 15.236158517542389,
+   "val_ppl": 4139801.9957424295,
+   "scored_tokens": 328205
+  },
+  {
+   "checkpoint": "moe_ctrl_dense_model.pt",
+   "val_loss": 4.966742084043081,
+   "val_ppl": 143.55842339881042,
+   "scored_tokens": 328205
+  },
+  {
+   "checkpoint": "moe_top1_model.pt",
+   "val_loss": 4.961119800791426,
+   "val_ppl": 142.75356197888453,
+   "scored_tokens": 328205
+  },
+  {
+   "checkpoint": "moe_top1_balanced_model.pt",
+   "val_loss": 4.955252206813149,
+   "val_ppl": 141.9183946457864,
+   "scored_tokens": 328205
+  }
+ ]
+}

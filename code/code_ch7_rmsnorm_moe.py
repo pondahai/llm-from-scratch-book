@@ -43,14 +43,24 @@ class SparseMoEBlock(nn.Module):
         self.top_k = top_k
         self.router = nn.Linear(d_model, num_experts, bias=False)
         self.experts = nn.ModuleList([SwiGLUFFN(d_model, hidden_dim) for _ in range(num_experts)])
+        # 統計掛鉤：記錄最近一次前向傳播的路由狀況，供 §9.10 的專家使用率分析
+        # 與負載平衡損失取用。不參與推論運算，也不會存進 state_dict。
+        self.last_prob_mean = None   # P_i：Router 給各專家的平均機率（保留梯度）
+        self.last_frac = None        # f_i：實際被分配到各專家的 Token 比例
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, L, D = x.shape
         x_flat = x.view(-1, D)
-        
+
         router_logits = self.router(x_flat)
-        weights, indices = torch.topk(F.softmax(router_logits, dim=-1), self.top_k, dim=-1)
-        
+        probs = F.softmax(router_logits, dim=-1)
+        weights, indices = torch.topk(probs, self.top_k, dim=-1)
+
+        self.last_prob_mean = probs.mean(0)
+        with torch.no_grad():   # f_i 來自 argmax，不可微分，只能當統計量
+            self.last_frac = (torch.bincount(indices.reshape(-1), minlength=self.num_experts)
+                              .float() / indices.numel())
+
         out = torch.zeros_like(x_flat)
         for i in range(self.num_experts):
             mask = (indices == i)
@@ -65,14 +75,15 @@ class TransformerBlock(nn.Module):
     """
     第 7 章整合類別：標準 Pre-Norm Transformer Block (含殘差流 Residual Stream)
     """
-    def __init__(self, d_model: int, n_heads: int, num_kv_groups: int, hidden_dim: int, rope: RotaryPositionalEmbedding, use_moe: bool = False):
+    def __init__(self, d_model: int, n_heads: int, num_kv_groups: int, hidden_dim: int, rope: RotaryPositionalEmbedding,
+                 use_moe: bool = False, num_experts: int = 4, top_k: int = 1):
         super().__init__()
         self.attn_norm = RMSNorm(d_model)
         self.attn = GroupedQueryAttentionWithKVCache(d_model, n_heads, num_kv_groups, rope)
-        
+
         self.ffn_norm = RMSNorm(d_model)
         if use_moe:
-            self.ffn = SparseMoEBlock(d_model, hidden_dim)
+            self.ffn = SparseMoEBlock(d_model, hidden_dim, num_experts=num_experts, top_k=top_k)
         else:
             self.ffn = SwiGLUFFN(d_model, hidden_dim)
 
