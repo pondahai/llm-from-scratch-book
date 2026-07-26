@@ -12,9 +12,8 @@ plans/
 *.epub
 *.mobi
 
-# 排版工具鏈（讀者用不到，且與書稿綁定）
-generate_pdf_book.py
-generate_pdf_weasyprint.py
+# 排版工具鏈已搬到私有 repo 的 build/（與 EPUB 建置腳本放在一起）。
+# 那兩支腳本原本放在這裡但被本檔排除，等於完全沒有版本控制，改壞了沒得還原。
 
 # 撰稿過程的工作截圖
 sec95_table_fixed.png
