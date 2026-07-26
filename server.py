@@ -15,7 +15,8 @@ import traceback
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 # 強制 stdout/stderr 使用 UTF-8 編碼
 if hasattr(sys.stdout, "reconfigure"):
@@ -120,7 +121,17 @@ def get_real_pytorch_model(tier_name: str):
     print(f"🚀 [後端動態載入 PyTorch 模型] 規格: {tier_name.upper()} | 參數量: {total_params:,} 個參數", flush=True)
     return model
 
+# 推論本身要序列化：torch.manual_seed 是行程層級的全域狀態，
+# 兩個請求同時跑會互相打亂隨機序列，破壞「同種子必得同結果」的可複現性。
+# 執行緒化只是為了不讓閒置連線卡住 accept 迴圈，不是為了並行推論。
+GEN_LOCK = threading.Lock()
+
 class LinkedLLMRequestHandler(BaseHTTPRequestHandler):
+    # 瀏覽器常會先開一條 TCP 連線卻不送請求（預連線）。沒有逾時的話，
+    # 處理該連線的執行緒會永遠卡在讀請求行上；配合下面的 ThreadingHTTPServer，
+    # 這種連線最多佔用一條執行緒 30 秒後就被回收。
+    timeout = 30
+
     def do_GET(self):
         try:
             req_path = self.path.split("?")[0]
@@ -168,31 +179,34 @@ class LinkedLLMRequestHandler(BaseHTTPRequestHandler):
                 print(f"   參數: prompt='{prompt}', tier='{tier}', temp={temperature}, top_k={top_k}, seed={seed_raw}", flush=True)
                 start_time = time.time()
 
-                # 1. 取得真實 PyTorch 後端模型
-                model = get_real_pytorch_model(tier)
-                total_params = sum(p.numel() for p in model.parameters())
-
-                # 2. 用真實 Tokenizer 將 Prompt 轉為 Token IDs
+                # 1. 用真實 Tokenizer 將 Prompt 轉為 Token IDs
                 prompt_ids = TOKENIZER.encode(prompt, add_bos_eos=False)
 
-                # 3. 設定隨機種子——必須緊貼 generate() 之前。
-                #    模型首次載入時的隨機初始化會消耗 RNG，若在取得模型前播種，
-                #    冷啟動的第一次請求會與之後（走 MODEL_CACHE）的結果不一致。
-                #    未指定 seed 時隨機播種，但一律回報實際種子，讓任何一次生成都能複現。
-                if seed_raw is None or seed_raw == "":
-                    seed = torch.seed()          # 隨機播種，並回傳實際使用的種子
-                else:
-                    seed = int(seed_raw)
-                    torch.manual_seed(seed)      # 指定種子：同參數必得同結果
+                # 2~4 全程持鎖：載入模型會動到 MODEL_CACHE，播種與生成則共用
+                #    行程層級的 RNG，這三步之間插進任何一個並行請求都會出錯。
+                with GEN_LOCK:
+                    # 2. 取得真實 PyTorch 後端模型
+                    model = get_real_pytorch_model(tier)
+                    total_params = sum(p.numel() for p in model.parameters())
 
-                # 4. 呼叫真實 PyTorch generate 推論
-                gen_ids = model.generate(
-                    prompt_ids=prompt_ids,
-                    max_new_tokens=max_tokens,
-                    temperature=temperature,
-                    top_k=top_k,
-                    eos_id=TOKENIZER.eos_id
-                )
+                    # 3. 設定隨機種子——必須緊貼 generate() 之前。
+                    #    模型首次載入時的隨機初始化會消耗 RNG，若在取得模型前播種，
+                    #    冷啟動的第一次請求會與之後（走 MODEL_CACHE）的結果不一致。
+                    #    未指定 seed 時隨機播種，但一律回報實際種子，讓任何一次生成都能複現。
+                    if seed_raw is None or seed_raw == "":
+                        seed = torch.seed()          # 隨機播種，並回傳實際使用的種子
+                    else:
+                        seed = int(seed_raw)
+                        torch.manual_seed(seed)      # 指定種子：同參數必得同結果
+
+                    # 4. 呼叫真實 PyTorch generate 推論
+                    gen_ids = model.generate(
+                        prompt_ids=prompt_ids,
+                        max_new_tokens=max_tokens,
+                        temperature=temperature,
+                        top_k=top_k,
+                        eos_id=TOKENIZER.eos_id
+                    )
 
                 # 5. 反解碼為文字與 Token 列表
                 generated_text = TOKENIZER.decode(gen_ids)
@@ -245,7 +259,11 @@ class LinkedLLMRequestHandler(BaseHTTPRequestHandler):
 
 def run_server(port=8080):
     server_address = ("", port)
-    httpd = HTTPServer(server_address, LinkedLLMRequestHandler)
+    # 必須用 ThreadingHTTPServer，不能用單執行緒的 HTTPServer：
+    # 單執行緒版本一次只服務一條連線，瀏覽器的預連線（開了 TCP 卻遲遲不送請求）
+    # 會讓 accept 迴圈整個停住，行程還活著、port 還在 listen，但頁面就是連不進來。
+    httpd = ThreadingHTTPServer(server_address, LinkedLLMRequestHandler)
+    httpd.daemon_threads = True
     print("=" * 80, flush=True)
     print(f"🔥 [前後端實時動態聯動 API 伺服器已啟動] Listening on http://localhost:{port}", flush=True)
     print(f"👉 切換模型或輸入提示詞，前端將直接呼叫 PyTorch 後端實時推論！", flush=True)
