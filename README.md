@@ -17,7 +17,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 # 2. 下載模型權重（不在 Git 倉庫裡，見下方說明）
 #    到 Releases 下載 checkpoints.zip，解壓到 checkpoints/
-#    https://github.com/pondahai/llm-from-scratch-mindmap/releases
+#    https://github.com/pondahai/llm-from-scratch-book/releases
 
 # 3. 直接用權重生成文字（不用訓練，秒開）
 python server.py
@@ -36,7 +36,7 @@ python train_dpo_alignment.py        # DPO 偏好對齊
 
 ## 📦 隨書附的模型權重
 
-> 📥 **權重不在 Git 倉庫裡，請到 [Releases](https://github.com/pondahai/llm-from-scratch-mindmap/releases) 下載**，解壓到 `checkpoints/` 即可。
+> 📥 **權重不在 Git 倉庫裡，請到 [Releases](https://github.com/pondahai/llm-from-scratch-book/releases) 下載**，解壓到 `checkpoints/` 即可。
 >
 > 六份權重合計約 60 MB。二進位檔一旦進了 Git 歷史就永久拿不掉，之後每次 `clone` 都得整包拖下來，
 > 所以改用 Releases 附件發佈。`server.py` 找不到權重時會直接印出下載網址。
