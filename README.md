@@ -38,7 +38,7 @@ python train_dpo_alignment.py        # DPO 偏好對齊
 
 > 📥 **權重不在 Git 倉庫裡，請到 [Releases](https://github.com/pondahai/llm-from-scratch-book/releases) 下載**，解壓到 `checkpoints/` 即可。
 >
-> 六份權重合計約 60 MB。二進位檔一旦進了 Git 歷史就永久拿不掉，之後每次 `clone` 都得整包拖下來，
+> 九份權重合計約 90 MB。二進位檔一旦進了 Git 歷史就永久拿不掉，之後每次 `clone` 都得整包拖下來，
 > 所以改用 Releases 附件發佈。`server.py` 找不到權重時會直接印出下載網址。
 
 全部使用**同一份詞表**（`data/vocab.json`，V=6,178），可互換載入。
@@ -51,7 +51,19 @@ python train_dpo_alignment.py        # DPO 偏好對齊
 | `sanguo_mini_model.pt` | 2,024,832 | 7.7 MB | A 組對照：只讀《三國演義》5 萬字 |
 | `mini_chat_model.pt` | 2,024,832 | 7.7 MB | SFT 指令對齊版 |
 | `mini_dpo_model.pt` | 2,024,832 | 7.7 MB | DPO 偏好對齊版 |
-| `moe_top1_balanced_model.pt` | 2,911,104 | 11.1 MB | §9.10 MoE 對照（4 專家 Top-1 + 負載平衡損失） |
+| `moe_ctrl_dense_model.pt` | 2,024,832 | 7.7 MB | §9.10 稠密對照組（種子固定 1234） |
+| `moe_top1_model.pt` | 2,911,104 | 11.1 MB | §9.10 MoE Top-1，**無平衡損失（坍縮版）** |
+| `moe_top1_balanced_model.pt` | 2,911,104 | 11.1 MB | §9.10 MoE Top-1 + 負載平衡損失 |
+
+> 最後三份是 §9.10 那組單變數對照實驗的完整權重。三者除 FFN 結構外所有條件相同，
+> 每個 Token 的 FFN 計算量也完全相同（294,912）——下載這三份就能直接驗證書中那張三欄表，
+> 不必自己跑三個半小時：
+>
+> ```bash
+> python analyze_moe_router.py   # 逐層專家使用率與有效專家數（2.11 vs 3.99）
+> python eval_validation.py      # 在《儒林外史》上重考
+> python bench_moe_speed.py      # 交錯量測速度（1.00x / 1.27x / 1.38x）
+> ```
 
 > ⚠️ **Large 規格（51.9M）不隨書提供**：純 CPU 以完整語料訓練約需 19 小時，且檔案 184 MB 超過 GitHub 單檔上限。若你有 GPU 想自行訓練，在 `train_corpus_experiment.py` 的 `SPECS` 加回 `"large": (512, 12, 16, 4, 2048)` 即可。
 
