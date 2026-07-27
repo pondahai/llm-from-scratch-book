@@ -102,7 +102,7 @@ def get_real_pytorch_model(tier_name: str):
     if not os.path.exists(ckpt_path):
         raise FileNotFoundError(
             f"找不到 {tier_name.upper()} 規格的權重檔：{ckpt_path}\n"
-            f"隨書權重不隨 Git 倉庫發佈 (檔案較大)，請至 GitHub Releases 下載後解壓到 checkpoints/：\n"
+            f"隨書權重不隨 Git 倉庫發佈 (檔案較大)，請至 GitHub Releases 下載 .pt 檔後放進 checkpoints/：\n"
             f"  https://github.com/pondahai/llm-from-scratch-book/releases\n"
             f"或自行訓練：`python train_corpus_experiment.py` (micro/mini/base 三規格與 A/B 對照組)、\n"
             f"`python train_sft_chat_model.py` (Chat 規格)、`python train_dpo_alignment.py` (DPO 規格)。"
